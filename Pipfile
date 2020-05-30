@@ -1,0 +1,22 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+bpython = "*"
+
+[packages]
+tweepy = "*"
+Flask = "*"
+SQLAlchemy = "*"
+PyYAML = "*"
+google-api-python-client = "*"
+pydrive = "*"
+
+[scripts]
+start = "python app.py"
+dev = "python dev.py"
+
+[requires]
+python_version = "3.8"

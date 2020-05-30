@@ -1,0 +1,21 @@
+version: "3"
+services:
+  devcontainer:
+    ports:
+      - "127.0.0.1:8080:8080"
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - ~/dotfiles:/root/dotfiles
+      - ~/.credentials:/root/.credentials
+    # [Optional] Required for ptrace-based debuggers like C++, Go, and Rust
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    # Overrides default command so things don't shut down after the process ends.
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    environment:
+      - LESSCHARSET=utf-8

@@ -1,0 +1,28 @@
+name: Publish Docker
+on:
+  # プッシュもしくはプルリクエストでワークフローを起動する
+  # ただしmasterブランチに対してのみ
+  push:
+    branches:
+      - master
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Publish
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: suzutan/aqua/worker
+          username: suzutan
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+      - name: Slack notify
+        uses: homoluctus/slatify@master
+        if: always()
+        with:
+          type: ${{ job.status }}
+          job_name: "*github action result*"
+          channel: "#notification"
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
