@@ -2,18 +2,20 @@ import asyncio
 from logging import Logger
 from typing import List
 
+from bot.cog import BackgroundCog
 from tweepy import API
 from tweepy.models import List as TwitterList
 from utils.config import Config
 from utils.logger import getLogger
 from utils.twitter import OAuth1Credentials, Twitter
 
+c: Config = Config()
 logger: Logger = getLogger(__name__)
 
 default_slug_name: str = "follows"
 
 
-class TwitterSyncList:
+class TwitterSyncList(BackgroundCog):
 
     def _chunks(self, split_list, n):
         for i in range(0, len(split_list), n):
@@ -36,8 +38,8 @@ class TwitterSyncList:
 
         return follows, (follows is not None)
 
-    async def do(self, slug: str = default_slug_name) -> bool:
-        api: API = Twitter(OAuth1Credentials(Config())).get_api()
+    def do(self, slug: str = default_slug_name) -> bool:
+        api: API = Twitter(OAuth1Credentials(c)).get_api()
 
         follows: TwitterList = self.get_list(api=api, slug=slug)
 
@@ -93,18 +95,13 @@ class TwitterSyncList:
 
         return True
 
-    async def __execute(self,):
-
-        while True:
+    async def run(self):
+        while self.is_running:
             logger.info(f"execute {__name__=}")
             try:
-                await self.do()
+                self.do()
             except Exception as e:
                 logger.error(e)
-            logger.info(f"finish {__name__=}")
-            await asyncio.sleep(15 * 60)
-
-    def execute(self):
-
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.__execute())
+            finally:
+                logger.info(f"finish {__name__=}")
+                await asyncio.sleep(15 * 60)

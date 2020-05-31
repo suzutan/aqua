@@ -147,4 +147,3 @@ settings.yaml
 credentials.json
 config/
 !config/default.yaml
-!config/test.yaml

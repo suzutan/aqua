@@ -4,10 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from utils.logger import getLogger
 from utils.singleton import Singleton
-
-logger: Logger = getLogger(__name__)
 
 
 class Config(Singleton):
@@ -29,7 +26,6 @@ class Config(Singleton):
 
         # env config check
         if not env_config_path.exists():
-            logger.error(f"failed load env config({app_env=})")
             raise FileNotFoundError(f"failed load env config({app_env=})")
 
         # resolve config

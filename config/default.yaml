@@ -1,0 +1,29 @@
+debug: False
+
+bot:
+  prefix: "!"
+  token: ""
+twitter:
+  ck: ""
+  cs: ""
+  at: ""
+  ats: ""
+plugins:
+  VTuberFanartCrawler:
+    gdrive_root_folder_id: ""
+    global_tweet_fetch_count: 200
+    targets:
+      - screen_name: "houshoumarine"
+        gdrive_folder_name: "宝鐘マリン"
+        fanart_hashtag: "マリンのお宝"
+      - screen_name: "usadapekora"
+        gdrive_folder_name: "兎田ぺこら"
+        fanart_hashtag: "ぺこらーと"
+        global_tweet_fetch_count: 400
+  UpdatePresence:
+    activities:
+      - "リングフィットアドベンチャー"
+      - "Apex Legends"
+      - "歌枠"
+      - "雑談"
+      - "マリオカート"

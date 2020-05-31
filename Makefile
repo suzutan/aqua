@@ -16,3 +16,7 @@ restore:
 	gopass show suzutan/app/aqua/development.yaml > config/development.yaml
 	gopass show suzutan/app/aqua/settings.yaml > settings.yaml
 	gopass show suzutan/app/aqua/credentials.json > credentials.json
+docker-build:
+	docker build -t aqua .
+docker-run: docker-build
+	docker run --rm -it aqua

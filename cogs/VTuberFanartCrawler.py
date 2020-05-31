@@ -3,9 +3,10 @@ import threading
 from logging import Logger
 from pathlib import Path
 from typing import List
-
+import time
 import requests
 import tweepy
+from bot.cog import BackgroundCog
 from requests import Response, Session
 from tweepy import API
 from tweepy.models import Status
@@ -18,18 +19,19 @@ from utils.twitter import OAuth1Credentials, Twitter
 drive: Drive = Drive().drive
 r: Session = requests.Session()
 c = Config()
+pc = c.read()["plugins"][__name__.split(".")[-1]]
 logger: Logger = getLogger(__name__)
 
 
-class VTuberFanartCrawler:
+class VTuberFanartCrawler(BackgroundCog):
 
-    async def download_media(self, target: dict, media_folders: List[GoogleDriveFile]):
+    def download_media(self, target: dict, media_folders: List[GoogleDriveFile]):
 
         logger.info(f"download_media: {target['screen_name']}")
 
         api: API = Twitter(OAuth1Credentials(c)).get_api()
 
-        fetch_count: int = c.get_user_media["global_tweet_fetch_count"]
+        fetch_count: int = pc["global_tweet_fetch_count"]
         if "tweet_fetch_count" in target.keys():
             fetch_count = target["tweet_fetch_count"]
             # 対象snのツイート3200件を取得
@@ -103,9 +105,8 @@ class VTuberFanartCrawler:
                 logger.info(f"download media: {target['fanart_hashtag']=}, progress:{count+1}/{all_count}({((count+1)/all_count)*100:.1f}%), {media_name=}")
 
                 # download
-                loop = asyncio.get_event_loop()
                 # イベントループで実行
-                media: Response = await loop.run_in_executor(None, r.get, f"{media['media_url']}:large")
+                media: Response = r.get(f"{media['media_url']}:large")
                 if media.status_code != 200:
                     logger.error("requests failed")
                     continue
@@ -114,7 +115,7 @@ class VTuberFanartCrawler:
                 with save_path.open("wb") as f:
                     f.write(media.content)
 
-    async def upload_media(self, target: dict, media_folders: List[GoogleDriveFile]):
+    def upload_media(self, target: dict, media_folders: List[GoogleDriveFile]):
         logger.info(f"upload_media: {target['screen_name']}")
         image_path: Path = (Path("images") / target["gdrive_folder_name"])
         # save media
@@ -138,41 +139,31 @@ class VTuberFanartCrawler:
             logger.info(f"upload succssful. progress: {count+1}/{local_file_count}({((count+1)/len(local_file_list))*100:.1f}%), {str(file)=}")
             file.unlink()
 
-    async def do(self, target: dict, media_folders: List[GoogleDriveFile]):
-
-        logger.info(f"do {target['screen_name']=}")
-        await self.download_media(target, media_folders)
-        await self.upload_media(target, media_folders)
-        logger.info(f"finish {__name__=}")
-
-    async def __execute(self,):
-        logger.info("start get_user_media")
+    def run(self):
 
         # media作成
         query = "'{}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'" \
-            .format(c.get_user_media["gdrive_root_folder_id"])
+            .format(pc["gdrive_root_folder_id"])
         media_folders: List[GoogleDriveFile] = drive.ListFile({'q': query}).GetList()
 
         logger.debug("fetch current filder list")
-        targets = c.get_user_media["targets"]
+        targets = pc["targets"]
         new_folder_names = list(map(lambda x: x["gdrive_folder_name"],
                                     filter(lambda x: x["gdrive_folder_name"] not in list(map(lambda y: y["title"], media_folders)), targets)))
 
         logger.info("create sub folder if not exists")
         for folder_name in new_folder_names:
-            media_folders.append(Drive().create_folder(parent_id=c.get_user_media["gdrive_root_folder_id"], folder_title=folder_name))
+            media_folders.append(Drive().create_folder(parent_id=pc["gdrive_root_folder_id"], folder_title=folder_name))
             logger.info(f"[create] {folder_name=} has been created.")
 
-        while True:
+        while self.is_running:
             for n, target in enumerate(targets):
                 try:
-                    await self.do(target, media_folders)
+                    self.download_media(target, media_folders)
+                    self.upload_media(target, media_folders)
                 except Exception as e:
-                    logger.error(e)
+                    logger.error("failed to run", exc_info=e)
+                    time.sleep(15)
 
-            logger.info("sleep for 10 minutes")
-            await asyncio.sleep(15 * 60)
-
-    def execute(self):
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.__execute())
+            logger.info("sleep for 15 minutes")
+            time.sleep(15*60)
