@@ -1,5 +1,4 @@
 debug: False
-
 bot:
   prefix: "!"
   token: ""
@@ -16,10 +15,8 @@ plugins:
       - screen_name: "houshoumarine"
         gdrive_folder_name: "宝鐘マリン"
         fanart_hashtag: "マリンのお宝"
-      - screen_name: "usadapekora"
-        gdrive_folder_name: "兎田ぺこら"
-        fanart_hashtag: "ぺこらーと"
-        global_tweet_fetch_count: 400
+        notify_channels:
+          - 0000000000000000
   UpdatePresence:
     activities:
       - "リングフィットアドベンチャー"
