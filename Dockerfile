@@ -10,8 +10,9 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY . /app
-RUN pip install pipenv --no-cache-dir && \
-    pipenv install --system --deploy && \
-    pip uninstall -y pipenv virtualenv-clone virtualenv
+RUN rm -rf config/development.yaml config/production.yaml
+RUN pip install pipenv --no-cache-dir
+RUN pipenv install --system --deploy
+RUN pip uninstall -y pipenv virtualenv-clone virtualenv
 
 CMD ["python", "app.py"]
