@@ -145,5 +145,5 @@ images/
 ## Google oauth2 credential
 settings.yaml
 credentials.json
-config/
+config/*.yaml
 !config/default.yaml
