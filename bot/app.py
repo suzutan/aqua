@@ -1,13 +1,13 @@
 import importlib
 from logging import INFO, Formatter, Logger, StreamHandler
-from utils.logger import getLogger as origin_getLogger
+from pathlib import Path
 
 from aiohttp import ClientSession
 from discord import Game, Status
 from discord.ext import commands
 from utils.config import Config
+from utils.logger import getLogger as origin_getLogger
 from utils.twitter import OAuth1Credentials, Twitter
-from pathlib import Path
 
 RESOURCES_DIR: str = "resources"
 CACHE_DIR: str = "cache"
@@ -33,7 +33,6 @@ class App:
 
     @classmethod
     def logger(cls):
-        locale.setlocale(locale.LC_TIME, "en_US.UTF-8")
 
         cls.logger = origin_getLogger("aqua")
         cls.config = Config()
