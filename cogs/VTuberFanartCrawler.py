@@ -1,12 +1,15 @@
 import asyncio
-import threading
+import time
 from logging import Logger
 from pathlib import Path
 from typing import List
-import time
+
 import requests
 import tweepy
+from bot.app import App
 from bot.cog import BackgroundCog
+from discord import Embed, Message
+from discord.ext import commands
 from requests import Response, Session
 from tweepy import API
 from tweepy.models import Status
@@ -80,6 +83,9 @@ class VTuberFanartCrawler(BackgroundCog):
 
         # download and upload
         for count, status in enumerate(upload_statuses):
+            # 新しいmediaをdiscordに通知
+            [asyncio.run_coroutine_threadsafe(App.bot.get_channel(t).send(
+                f"https://twitter.com/{screen_name}/status/{status.id}"), App.bot.loop) for t in target["notify_channels"]]
             # 1ツイート複数メディア(画像)があるのでnumで連番を確保
             for num, media in enumerate(status.extended_entities["media"]):
 
