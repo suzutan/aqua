@@ -5,6 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 bpython = "*"
+flake8 = "*"
+autopep8 = "*"
 
 [packages]
 tweepy = "*"
@@ -14,6 +16,7 @@ PyYAML = "*"
 google-api-python-client = "*"
 pydrive = "*"
 discord-py = "*"
+sqlalchemy = "*"
 
 [scripts]
 start = "python app.py"

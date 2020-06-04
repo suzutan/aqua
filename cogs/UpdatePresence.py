@@ -2,14 +2,17 @@ import asyncio
 import random
 from logging import Logger
 from typing import List
+
+from discord import Game, Status
+
 from bot import App
 from bot.cog import BackgroundCog
-from discord import Game, Status, Streaming
-from utils.logger import getLogger
 from utils.config import Config
+from utils.logger import getLogger
+
 logger: Logger = getLogger(__name__)
-c: Config = Config()
-pc = c.read()["plugins"][__name__.split(".")[-1]]
+
+activities: List[str] = Config().read()["bot"]["presences"]
 
 
 class UpdatePresence(BackgroundCog):
@@ -19,9 +22,9 @@ class UpdatePresence(BackgroundCog):
 
         while self.is_running:
             try:
-                status: str = random.choice(pc["activities"])
+                status: str = random.choice(activities)
                 logger.info(f"set status: {status}")
-                await App.bot.change_presence(activity=Streaming(name=status, url="https://www.youtube.com/channel/UC1opHUrw8rvnsadT-iGp7Cg"))
+                await App.bot.change_presence(activity=Game(name=status))
             except Exception as e:
                 logger.error("does not change presense.", exc_info=e)
             finally:

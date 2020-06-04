@@ -2,25 +2,28 @@ debug: False
 bot:
   prefix: "!"
   token: ""
+  presences:
+    - "リングフィットアドベンチャー"
+    - "Apex Legends"
+    - "歌枠"
+    - "雑談"
+    - "マリオカート"
 twitter:
-  ck: ""
-  cs: ""
-  at: ""
-  ats: ""
-plugins:
-  VTuberFanartCrawler:
-    gdrive_root_folder_id: ""
-    global_tweet_fetch_count: 200
-    targets:
-      - screen_name: "houshoumarine"
-        gdrive_folder_name: "宝鐘マリン"
-        fanart_hashtag: "マリンのお宝"
-        notify_channels:
-          - 0000000000000000
-  UpdatePresence:
-    activities:
-      - "リングフィットアドベンチャー"
-      - "Apex Legends"
-      - "歌枠"
-      - "雑談"
-      - "マリオカート"
+  credential:
+    ck: ""
+    cs: ""
+    at: ""
+    ats: ""
+  sync_list:
+    enabled: False
+    slug: "follows"
+VTuberFanartCrawler:
+  enabled: False
+  gdrive_root_folder_id: ""
+  global_tweet_fetch_count: 200
+  targets:
+    - screen_name: "houshoumarine"
+      gdrive_folder_name: "宝鐘マリン"
+      fanart_hashtag: "マリンのお宝"
+      notify_channels:
+        - 0000000000000000

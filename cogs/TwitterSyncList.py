@@ -2,17 +2,15 @@ import asyncio
 from logging import Logger
 from typing import List
 
-from bot.cog import BackgroundCog
 from tweepy import API
 from tweepy.models import List as TwitterList
+
+from bot.cog import BackgroundCog
 from utils.config import Config
 from utils.logger import getLogger
 from utils.twitter import OAuth1Credentials, Twitter
 
-c: Config = Config()
 logger: Logger = getLogger(__name__)
-
-default_slug_name: str = "follows"
 
 
 class TwitterSyncList(BackgroundCog):
@@ -21,7 +19,7 @@ class TwitterSyncList(BackgroundCog):
         for i in range(0, len(split_list), n):
             yield split_list[i: i + n]
 
-    def get_list(self, api: API, slug: str = default_slug_name) -> (TwitterList):
+    def get_list(self, api: API, slug: str) -> (TwitterList):
         current_lists: List[TwitterList] = api.lists_all()
         target_list: TwitterList = next(
             filter(lambda i: i.slug == slug, current_lists), None)
@@ -38,8 +36,9 @@ class TwitterSyncList(BackgroundCog):
 
         return follows, (follows is not None)
 
-    def do(self, slug: str = default_slug_name) -> bool:
-        api: API = Twitter(OAuth1Credentials(c)).get_api()
+    def do(self) -> bool:
+        api: API = Twitter(OAuth1Credentials(Config())).get_api()
+        slug: str = Config().read()["twitter"]["sync_list"]["slug"]
 
         follows: TwitterList = self.get_list(api=api, slug=slug)
 
@@ -96,6 +95,12 @@ class TwitterSyncList(BackgroundCog):
         return True
 
     async def run(self):
+
+        if not Config().read()["twitter"]["sync_list"]["enabled"]:
+            logger.info("TwitterSyncList is not enabled. cog removed.")
+            self.bot.remove_cog(__name__)
+            return
+
         while self.is_running:
             logger.info(f"execute {__name__=}")
             try:

@@ -23,18 +23,7 @@ class App:
     @classmethod
     def run(cls):
 
-        cls.logger = origin_getLogger("aqua")
-        cls.config = Config()
-        cls.session = ClientSession(raise_for_status=True)
-        cls.bot = commands.Bot(command_prefix=cls.config.bot["prefix"] or "!",
-                               status=Status.dnd, activity=Game("起動中..."))
-        cls.__load_cogs()
-        cls.bot.run(cls.config.bot["token"])
-
-    @classmethod
-    def logger(cls):
-
-        cls.logger = origin_getLogger("aqua")
+        cls.logger = origin_getLogger(__name__)
         cls.config = Config()
         cls.session = ClientSession(raise_for_status=True)
         cls.bot = commands.Bot(command_prefix=cls.config.bot["prefix"] or "!",
@@ -57,7 +46,7 @@ class App:
 
             if (cog := getattr(mod, name, None)) and isinstance(cog, type) and issubclass(cog, commands.Cog):
                 try:
-                    cls.bot.add_cog(cog())
+                    cls.bot.add_cog(cog(cls.bot))
 
                     cls.logger.info(f"Cog: {name} loaded.")
                 except Exception as e:

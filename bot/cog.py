@@ -6,8 +6,16 @@ from discord.ext import commands
 from bot import App
 
 
-class BackgroundCog(commands.Cog):
-    def __init__(self):
+class BaseCog(commands.Cog):
+
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
+
+
+class BackgroundCog(BaseCog):
+
+    def __init__(self, bot: commands.Bot):
+        super().__init__(bot)
         App.bot.loop.create_task(self.__wrap())
 
     def run(self):

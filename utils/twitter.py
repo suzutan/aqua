@@ -22,14 +22,14 @@ class OAuth1Credentials:
             raise AttributeError("twitter config  is not defined")
 
         tw = config.read()["twitter"]
-        if "" in tw.values():
+        if "" in tw["credential"].values():
             logger.error("credentials is not valid")
             raise AttributeError("twitter credentials is not valid")
 
-        self.ck = tw["ck"]
-        self.cs = tw["cs"]
-        self.at = tw["at"]
-        self.ats = tw["ats"]
+        self.ck = tw["credential"]["ck"]
+        self.cs = tw["credential"]["cs"]
+        self.at = tw["credential"]["at"]
+        self.ats = tw["credential"]["ats"]
 
 
 class Twitter(Singleton):
