@@ -23,5 +23,5 @@ docker-build:
 docker-run: docker-build
 	docker run --rm -it aqua
 
-run-prod:
+run-prod: docker-build
 	docker run -e APP_ENV=production --rm --name aqua -v ${PWD}/config/production.yaml:/app/config/production.yaml aqua
