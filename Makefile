@@ -1,9 +1,9 @@
 .PHONY: all
 
 dev:
-	pipenv run dev
+	python dev.py
 start:
-	pipenv run start
+	python app.py
 
 backup:
 	cat config/development.yaml | gopass insert -f suzutan/app/aqua/development.yaml
@@ -18,10 +18,13 @@ restore:
 	gopass show suzutan/app/aqua/production.yaml > config/production.yaml
 	gopass show suzutan/app/aqua/settings.yaml > settings.yaml
 	gopass show suzutan/app/aqua/credentials.json > credentials.json
-docker-build:
+build:
 	docker build -t aqua .
-docker-run: docker-build
-	docker run --rm -it aqua
 
-run-prod: docker-build
-	docker run -e APP_ENV=production --rm --name aqua -v ${PWD}/config/production.yaml:/app/config/production.yaml aqua
+run-prod: build
+	docker run --rm --name aqua \
+	-e APP_ENV=production \
+	-v ${PWD}/settings.yaml:/app/settings.yaml \
+	-v ${PWD}/credentials.json:/app/credentials.json \
+	-v ${PWD}/config/production.yaml:/app/config/production.yaml \
+	aqua

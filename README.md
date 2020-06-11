@@ -1,10 +1,6 @@
 # aqua
 
-hololive worker
-
-## docs
-
-tweepy: <http://docs.tweepy.org/en/latest/api.html>
+discord bot
 
 ## develop
 

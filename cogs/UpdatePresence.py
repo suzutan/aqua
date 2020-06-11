@@ -7,12 +7,14 @@ from discord import Game, Status
 
 from bot import App
 from bot.cog import BackgroundCog
-from utils.config import Config
+from utils.config import Config, ConfigData
 from utils.logger import getLogger
 
 logger: Logger = getLogger(__name__)
 
-activities: List[str] = Config().read()["bot"]["presences"]
+config: ConfigData = Config.read()
+
+activities: List[str] = config.bot.presences
 
 
 class UpdatePresence(BackgroundCog):

@@ -5,9 +5,8 @@ from pathlib import Path
 from aiohttp import ClientSession
 from discord import Game, Status
 from discord.ext import commands
-from utils.config import Config
+from utils.config import Config, ConfigData
 from utils.logger import getLogger as origin_getLogger
-from utils.twitter import OAuth1Credentials, Twitter
 
 RESOURCES_DIR: str = "resources"
 CACHE_DIR: str = "cache"
@@ -16,7 +15,7 @@ COGS_DIR: str = "cogs"
 
 class App:
     bot: commands.Bot
-    config: Config
+    config: ConfigData
     logger: Logger
     session: ClientSession
 
@@ -24,12 +23,12 @@ class App:
     def run(cls):
 
         cls.logger = origin_getLogger(__name__)
-        cls.config = Config()
+        cls.config = Config.read()
         cls.session = ClientSession(raise_for_status=True)
-        cls.bot = commands.Bot(command_prefix=cls.config.bot["prefix"] or "!",
+        cls.bot = commands.Bot(command_prefix=cls.config.bot.prefix or "!",
                                status=Status.dnd, activity=Game("起動中..."))
         cls.__load_cogs()
-        cls.bot.run(cls.config.bot["token"])
+        cls.bot.run(cls.config.bot.token)
 
     @classmethod
     def __load_cogs(cls):

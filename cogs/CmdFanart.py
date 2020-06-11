@@ -7,18 +7,19 @@ from discord.ext import commands
 from requests import Session
 
 from bot.cog import BaseCog
-from utils.config import Config
+from utils.config import Config, ConfigData
 from utils.googledrive import GoogleDrive as Drive
 from utils.googledrive import GoogleDriveFile
 from utils.logger import getLogger
 
 drive: Drive = Drive()
+config: ConfigData = Config.read()
+
 r: Session = requests.Session()
-config = Config().read()["VTuberFanartCrawler"]
 logger: Logger = getLogger(__name__)
 
 
-class VTuberFanartCounter(BaseCog):
+class CmdFanart(BaseCog):
 
     @commands.group()
     async def fanart(self, ctx):
@@ -40,7 +41,8 @@ class VTuberFanartCounter(BaseCog):
 
         async with ctx.channel.typing():
             logger.debug("fetch subfolder list")
-            subfolders: List[GoogleDriveFile] = drive.fetch_file_list(folder_id=config["gdrive_root_folder_id"], folder_only=True)
+            subfolders: List[GoogleDriveFile] = \
+                drive.fetch_file_list(folder_id=config.vtuber_fanart_crawler.gdrive_root_folder_id, folder_only=True)
 
             logger.debug("fetch file list in subfolder")
             fetch_folders: List[dict] = [{"files": drive.fetch_file_list(folder_id=folder["id"]), "folder": folder} for folder in subfolders]

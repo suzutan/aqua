@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "aqua"
+version = "0.1.0"
+description = "discord bot"
+authors = ["Suzuka Asagiri <admin@suzutan.jp>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+tweepy = "*"
+Flask = "*"
+SQLAlchemy = "*"
+PyYAML = "*"
+google-api-python-client = "*"
+pydrive = "*"
+discord-py = "*"
+sqlalchemy = "*"
+
+[tool.poetry.dev-dependencies]
+bpython = "*"
+flake8 = "*"
+autopep8 = "*"
+
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

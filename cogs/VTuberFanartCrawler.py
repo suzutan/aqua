@@ -12,41 +12,36 @@ from tweepy.models import Status
 
 from bot.app import App
 from bot.cog import BackgroundCog
-from utils.config import Config
+from utils.config import Config, ConfigData
 from utils.googledrive import GoogleDrive as Drive
 from utils.googledrive import GoogleDriveFile
 from utils.logger import getLogger
-from utils.twitter import OAuth1Credentials, Twitter
+from utils.twitter import twitterAPI
 
 r: Session = requests.Session()
-config = Config().read()["VTuberFanartCrawler"]
+config: ConfigData.VTuberFanartCrawler = Config.read().vtuber_fanart_crawler
 logger: Logger = getLogger(__name__)
 
 
 class VTuberFanartCrawler(BackgroundCog):
 
-    def download_media(self, target: dict, media_folders: List[GoogleDriveFile]):
+    def download_media(self, target: ConfigData.VTuberFanartCrawler.Target, media_folders: List[GoogleDriveFile]):
 
-        logger.info(f"download_media: {target['screen_name']}")
+        logger.info(f"download_media: {target.screen_name}")
 
-        api: API = Twitter(OAuth1Credentials(Config())).get_api()
+        api: API = twitterAPI(config.credential)
 
-        fetch_count: int = config["global_tweet_fetch_count"]
-        if "tweet_fetch_count" in target.keys():
-            fetch_count = target["tweet_fetch_count"]
-            # 対象snのツイート3200件を取得
-
-        logger.info(f"fetch tweet, count:{fetch_count}")
-        all_statuses = tweepy.Cursor(api.user_timeline, screen_name=target["screen_name"], count=200).items(fetch_count)
+        logger.info(f"fetch tweet, count:{target.tweet_fetch_count}")
+        all_statuses = tweepy.Cursor(api.user_timeline, screen_name=target.screen_name, count=200).items(target.tweet_fetch_count)
         # メディアが追加されてるツイートのみをフィルタ
         media_statuses = filter(lambda y: "media" in y.extended_entities.keys(), filter(lambda x: hasattr(x, "extended_entities"), all_statuses))
 
         # イラスト投稿用ハッシュタグが設定されているツイートのみフィルタ
         fanart_filtered_media_statuses = filter(lambda x: (len(x.entities["hashtags"]) > 0 and next(
-            filter(lambda y: y["text"].lower() == target["fanart_hashtag"].lower(), x.entities["hashtags"]), None) is not None), media_statuses)
+            filter(lambda y: y["text"].lower() == target.fanart_hashtag.lower(), x.entities["hashtags"]), None) is not None), media_statuses)
 
         # save media
-        target_folder = next(filter(lambda x: x["title"] == target["gdrive_folder_name"], media_folders), None)
+        target_folder = next(filter(lambda x: x["title"] == target.gdrive_folder_name, media_folders), None)
         if target_folder is None:
             logger.error("failed fetch target_folder")
             return
@@ -75,14 +70,14 @@ class VTuberFanartCrawler(BackgroundCog):
             if new_media:
                 upload_statuses.append(status)
 
-        logger.info(f"fanart hashtag: {target['fanart_hashtag']}, download tweet count: {len(upload_statuses)}")
+        logger.info(f"fanart hashtag: {target.fanart_hashtag}, download tweet count: {len(upload_statuses)}")
         all_count: int = len(upload_statuses)
 
         # download and upload
         for count, status in enumerate(upload_statuses):
             # 新しいmediaをdiscordに通知
             [asyncio.run_coroutine_threadsafe(App.bot.get_channel(t).send(
-                f"https://twitter.com/{screen_name}/status/{status.id}"), App.bot.loop) for t in target["notify_channels"]]
+                f"https://twitter.com/{screen_name}/status/{status.id}"), App.bot.loop) for t in target.notify_channels]
             # 1ツイート複数メディア(画像)があるのでnumで連番を確保
             for num, media in enumerate(status.extended_entities["media"]):
 
@@ -98,14 +93,14 @@ class VTuberFanartCrawler(BackgroundCog):
                     logger.debug(f"target {media_name=} has been uploaded for google drive")
                     continue
 
-                save_path: Path = (Path("images") / target["gdrive_folder_name"] / media_name)
+                save_path: Path = (Path("images") / target.gdrive_folder_name / media_name)
                 save_path.parent.mkdir(parents=True, exist_ok=True)
                 if save_path.exists():
                     logger.debug(f"target {media_name=} has been downloaded for local")
                     continue
 
                 # 保存
-                logger.info(f"download media: {target['fanart_hashtag']=}, progress:{count+1}/{all_count}({((count+1)/all_count)*100:.1f}%), {media_name=}")
+                logger.info(f"download media: {target.fanart_hashtag=}, progress:{count+1}/{all_count}({((count+1)/all_count)*100:.1f}%), {media_name=}")
 
                 # download
                 # イベントループで実行
@@ -118,11 +113,11 @@ class VTuberFanartCrawler(BackgroundCog):
                 with save_path.open("wb") as f:
                     f.write(media.content)
 
-    def upload_media(self, target: dict, media_folders: List[GoogleDriveFile]):
-        logger.info(f"upload_media: {target['screen_name']}")
-        image_path: Path = (Path("images") / target["gdrive_folder_name"])
+    def upload_media(self, target: ConfigData.VTuberFanartCrawler.Target, media_folders: List[GoogleDriveFile]):
+        logger.info(f"upload_media: {target.screen_name}")
+        image_path: Path = (Path("images") / target.gdrive_folder_name)
         # save media
-        target_folder = next(filter(lambda x: x["title"] == target["gdrive_folder_name"], media_folders), None)
+        target_folder = next(filter(lambda x: x["title"] == target.gdrive_folder_name, media_folders), None)
         if target_folder is None:
             logger.error("failed fetch target_folder")
             return
@@ -144,24 +139,24 @@ class VTuberFanartCrawler(BackgroundCog):
 
     def run(self):
 
-        if not Config().read()["VTuberFanartCrawler"]["enabled"]:
+        if not config.enabled:
             logger.info("VTuberFanartCrawler is not enabled. cog removed.")
             self.bot.remove_cog(__name__)
             return
 
         # media作成
         query = "'{}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'" \
-            .format(config["gdrive_root_folder_id"])
+            .format(config.gdrive_root_folder_id)
         media_folders: List[GoogleDriveFile] = Drive().drive.ListFile({'q': query}).GetList()
+        media_folders_name: List[str] = list(map(lambda y: y["title"], media_folders))
 
         logger.debug("fetch current filder list")
-        targets = config["targets"]
-        new_folder_names = list(map(lambda x: x["gdrive_folder_name"],
-                                    filter(lambda x: x["gdrive_folder_name"] not in list(map(lambda y: y["title"], media_folders)), targets)))
+        targets: List[ConfigData.VTuberFanartCrawler.Target] = config.targets
+        new_folder_names = list(map(lambda x: x.gdrive_folder_name, filter(lambda x: x.gdrive_folder_name not in media_folders_name, targets)))
 
         logger.info("create sub folder if not exists")
         for folder_name in new_folder_names:
-            media_folders.append(Drive().create_folder(parent_id=config["gdrive_root_folder_id"], folder_title=folder_name))
+            media_folders.append(Drive().create_folder(parent_id=config.gdrive_root_folder_id, folder_title=folder_name))
             logger.info(f"[create] {folder_name=} has been created.")
 
         while self.is_running:

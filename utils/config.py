@@ -1,17 +1,64 @@
 import os
-from logging import Logger
 from pathlib import Path
 from typing import Optional
-
+from dataclasses import dataclass
 import yaml
+from typing import List
 from utils.singleton import Singleton
 
 
-class Config(Singleton):
-    __config: dict = None
+@dataclass
+class ConfigData:
+    @dataclass
+    class Bot:
+        prefix: str
+        token: str
+        presences: List[str]
 
-    def __getattr__(self, name):
-        return self.__config.__getitem__(name)
+    @dataclass
+    class TwitterSyncList:
+        @dataclass
+        class Credential:
+            ck: str
+            cs: str
+            at: str
+            ats: str
+
+        enabled: str
+        slug: str
+        credential: Credential
+
+    @dataclass
+    class VTuberFanartCrawler:
+
+        @dataclass
+        class Credential:
+            ck: str
+            cs: str
+            at: str
+            ats: str
+
+        @dataclass
+        class Target:
+            screen_name: str
+            gdrive_folder_name: str
+            fanart_hashtag: str
+            tweet_fetch_count: int
+            notify_channels: List[int]
+
+        enabled: bool
+        credential: Credential
+        gdrive_root_folder_id: str
+        targets: List[Target]
+
+    debug: bool
+    bot: Bot
+    twitter_sync_list: List[TwitterSyncList]
+    vtuber_fanart_crawler: VTuberFanartCrawler
+
+
+class Config(Singleton):
+    config: ConfigData = None
 
     def __init__(self):
 
@@ -22,7 +69,7 @@ class Config(Singleton):
 
         default_config: dict = {}
         env_config: dict = {}
-        resolved_config: dict = {}
+        r: dict = {}
 
         # env config check
         if not env_config_path.exists():
@@ -33,24 +80,47 @@ class Config(Singleton):
             default_config = yaml.load(f, Loader=yaml.SafeLoader)
         with env_config_path.open("r") as f:
             env_config = yaml.load(f, Loader=yaml.SafeLoader)
-        resolved_config = self.__merge(default_config, env_config)
+        r = self.__merge(default_config, env_config)
 
-        self.__config = resolved_config
+        data = ConfigData(
+            debug=r["debug"],
+            bot=ConfigData.Bot(
+                prefix=r["bot"]["prefix"],
+                token=r["bot"]["token"],
+                presences=r["bot"]["presences"],
+            ),
+            twitter_sync_list=list(map(lambda x: ConfigData.TwitterSyncList(
+                enabled=x["enabled"],
+                slug=x["slug"],
+                credential=ConfigData.TwitterSyncList.Credential(**x["credential"]),
+            ), r["TwitterSyncList"])),
+            vtuber_fanart_crawler=ConfigData.VTuberFanartCrawler(
+                enabled=r["VTuberFanartCrawler"]["enabled"],
+                credential=ConfigData.VTuberFanartCrawler.Credential(**r["VTuberFanartCrawler"]["credential"]),
+                gdrive_root_folder_id=r["VTuberFanartCrawler"]["gdrive_root_folder_id"],
+                targets=list(map(lambda x: ConfigData.VTuberFanartCrawler.Target(
+                    screen_name=x["screen_name"],
+                    gdrive_folder_name=x["gdrive_folder_name"],
+                    fanart_hashtag=x["fanart_hashtag"],
+                    tweet_fetch_count=x["tweet_fetch_count"],
+                    notify_channels=x["notify_channels"],
+                ), r["VTuberFanartCrawler"]["targets"]))
+            )
+        )
 
-    @staticmethod
-    def __read_env(env_name: str,
-                   default: Optional[str] = None) -> (Optional[str]):
-        if env_name not in os.environ.keys():
-            return default
+        self.config = data
 
-        return os.environ["APP_ENV"]
+    @ staticmethod
+    def __read_env(env_name: str, default: Optional[str] = None) -> (Optional[str]):
 
-    def __merge(self, old: dict, new: dict) -> dict:
+        return default if env_name not in os.environ.keys() else os.environ["APP_ENV"]
+
+    def __merge(self, old: dict, new: dict) -> (dict):
         if isinstance(old, dict) and isinstance(new, dict):
             for k, v in old.items():
                 new[k] = self.__merge(v, new[k]) if k in new else v
         return new
 
-    def read(self) -> dict:
-
-        return self.__config
+    @classmethod
+    def read(cls) -> ConfigData:
+        return Config().config

@@ -1,7 +1,9 @@
 from logging import DEBUG, INFO, Formatter, Logger, StreamHandler
 from logging import getLogger as origin_getLogger
 
-from utils.config import Config
+from utils.config import Config, ConfigData
+
+config: ConfigData = Config().read()
 
 
 def getLogger(name: str) -> Logger:
@@ -10,7 +12,7 @@ def getLogger(name: str) -> Logger:
     handler.setFormatter(Formatter("level=%(levelname)s\ttime=%(asctime)s\tname=%(name)s\tmessage=%(message)s"))
     logger.setLevel(INFO)
 
-    if Config().debug:
+    if config.debug:
         logger.setLevel(DEBUG)
 
     logger.addHandler(handler)

@@ -8,19 +8,24 @@ bot:
     - "歌枠"
     - "雑談"
     - "マリオカート"
-twitter:
+
+TwitterSyncList:
+  - enabled: False
+    slug: follows
+    credential:
+      ck: ""
+      cs: ""
+      at: ""
+      ats: ""
+
+VTuberFanartCrawler:
+  enabled: False
   credential:
     ck: ""
     cs: ""
     at: ""
     ats: ""
-  sync_list:
-    enabled: False
-    slug: "follows"
-VTuberFanartCrawler:
-  enabled: False
   gdrive_root_folder_id: ""
-  global_tweet_fetch_count: 200
   targets:
     - screen_name: "houshoumarine"
       gdrive_folder_name: "宝鐘マリン"

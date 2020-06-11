@@ -1,0 +1,13 @@
+
+.idea
+.venv
+.vscode
+.github
+.devcontainer
+
+images
+dev.py
+crdentials.json
+settings.yaml
+config/development.yaml
+config/production.yaml

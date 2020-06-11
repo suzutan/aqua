@@ -2,13 +2,15 @@ import asyncio
 from logging import Logger
 from typing import List
 
-from tweepy import API
+from tweepy import API as TwitterAPI
 from tweepy.models import List as TwitterList
 
 from bot.cog import BackgroundCog
-from utils.config import Config
+from utils.config import Config, ConfigData
 from utils.logger import getLogger
-from utils.twitter import OAuth1Credentials, Twitter
+from utils.twitter import twitterAPI
+
+config: ConfigData = Config.read()
 
 logger: Logger = getLogger(__name__)
 
@@ -19,13 +21,13 @@ class TwitterSyncList(BackgroundCog):
         for i in range(0, len(split_list), n):
             yield split_list[i: i + n]
 
-    def get_list(self, api: API, slug: str) -> (TwitterList):
+    def get_list(self, api: TwitterAPI, slug: str) -> (TwitterList):
         current_lists: List[TwitterList] = api.lists_all()
         target_list: TwitterList = next(
             filter(lambda i: i.slug == slug, current_lists), None)
         return target_list
 
-    def create_list(self, api: API, **kwargs) -> (TwitterList, bool):
+    def create_list(self, api: TwitterAPI, **kwargs) -> (TwitterList, bool):
         name: str = kwargs.get("name", "follows")
         mode: str = kwargs.get("mode", "private")
         description: str = kwargs.get("description", "follow list")
@@ -36,9 +38,9 @@ class TwitterSyncList(BackgroundCog):
 
         return follows, (follows is not None)
 
-    def do(self) -> bool:
-        api: API = Twitter(OAuth1Credentials(Config())).get_api()
-        slug: str = Config().read()["twitter"]["sync_list"]["slug"]
+    def do(self, account: ConfigData.TwitterSyncList) -> bool:
+        api: TwitterAPI = twitterAPI(account.credential)
+        slug: str = account.slug
 
         follows: TwitterList = self.get_list(api=api, slug=slug)
 
@@ -84,7 +86,7 @@ class TwitterSyncList(BackgroundCog):
             logger.info(f"remove member count:{len(chunked_user_ids)}")
 
         follows: TwitterList = self.get_list(api=api, slug=slug)
-        after_member_count: int = result.member_count
+        after_member_count: int = follows.member_count
         logger.info(
             "result: before:{} after:{} diff:{}".format(
                 before_member_count,
@@ -96,17 +98,17 @@ class TwitterSyncList(BackgroundCog):
 
     async def run(self):
 
-        if not Config().read()["twitter"]["sync_list"]["enabled"]:
+        if next(filter(lambda x: x.enabled is True, config.twitter_sync_list), None) is None:
             logger.info("TwitterSyncList is not enabled. cog removed.")
             self.bot.remove_cog(__name__)
             return
 
         while self.is_running:
             logger.info(f"execute {__name__=}")
-            try:
-                self.do()
-            except Exception as e:
-                logger.error(e)
-            finally:
-                logger.info(f"finish {__name__=}")
-                await asyncio.sleep(15 * 60)
+            for account in config.twitter_sync_list:
+                try:
+                    self.do(account=account)
+                except Exception as e:
+                    logger.error(e)
+            logger.info(f"finish {__name__=}")
+            await asyncio.sleep(15 * 60)
