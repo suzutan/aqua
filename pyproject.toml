@@ -2,7 +2,7 @@
 name = "aqua"
 version = "0.1.0"
 description = "discord bot"
-authors = ["Suzuka Asagiri <admin@suzutan.jp>"]
+authors = ["Suzuka Asagiri <git@suzutan.jp>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
