@@ -154,10 +154,11 @@ class VTuberFanartCrawler(BackgroundCog):
         targets: List[ConfigData.VTuberFanartCrawler.Target] = config.targets
         new_folder_names = list(map(lambda x: x.gdrive_folder_name, filter(lambda x: x.gdrive_folder_name not in media_folders_name, targets)))
 
-        logger.info("create sub folder if not exists")
-        for folder_name in new_folder_names:
-            media_folders.append(Drive().create_folder(parent_id=config.gdrive_root_folder_id, folder_title=folder_name))
-            logger.info(f"[create] {folder_name=} has been created.")
+        if len(new_folder_names) > 0:
+            logger.info(f"create sub folder. count:{len(new_folder_names)}")
+            for folder_name in new_folder_names:
+                media_folders.append(Drive().create_folder(parent_id=config.gdrive_root_folder_id, folder_title=folder_name))
+                logger.info(f"create folder: {folder_name=}")
 
         while self.is_running:
             for n, target in enumerate(targets):
