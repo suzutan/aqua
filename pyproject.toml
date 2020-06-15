@@ -20,6 +20,7 @@ sqlalchemy = "*"
 bpython = "*"
 flake8 = "*"
 autopep8 = "*"
+rope = "^0.17.0"
 
 
 [build-system]

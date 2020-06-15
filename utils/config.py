@@ -27,6 +27,8 @@ class ConfigData:
         enabled: str
         slug: str
         credential: Credential
+        is_sync_follows: bool
+        target_screen_names: List[str]
 
     @dataclass
     class VTuberFanartCrawler:
@@ -93,6 +95,8 @@ class Config(Singleton):
                 enabled=x["enabled"],
                 slug=x["slug"],
                 credential=ConfigData.TwitterSyncList.Credential(**x["credential"]),
+                is_sync_follows=False if "is_sync_follows" not in x.keys() else x["is_sync_follows"],  # keyがなければデフォルトfalse
+                target_screen_names=[] if "target_screen_names" not in x.keys() else x["target_screen_names"],  # target_screen_namesがなければからっぽ
             ), r["TwitterSyncList"])),
             vtuber_fanart_crawler=ConfigData.VTuberFanartCrawler(
                 enabled=r["VTuberFanartCrawler"]["enabled"],

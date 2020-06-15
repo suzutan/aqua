@@ -1,7 +1,8 @@
 import asyncio
 from logging import Logger
-from typing import List
+from typing import List, Optional
 
+import tweepy
 from tweepy import API as TwitterAPI
 from tweepy.models import List as TwitterList
 
@@ -38,63 +39,62 @@ class TwitterSyncList(BackgroundCog):
 
         return follows, (follows is not None)
 
-    def do(self, account: ConfigData.TwitterSyncList) -> bool:
+    def __convert_sn_to_id(self, api: TwitterAPI, screen_name: str) -> (Optional[int]):
+        user: tweepy.models.User = api.get_user(screen_name=screen_name)
+
+        return None if not user else user.id
+
+    def do(self, account: ConfigData.TwitterSyncList):
+
         api: TwitterAPI = twitterAPI(account.credential)
         slug: str = account.slug
 
-        follows: TwitterList = self.get_list(api=api, slug=slug)
-
+        target_list: TwitterList = self.get_list(api=api, slug=slug)
         # create follow list if not exist
-        if follows is None:
-            logger.warn(f"{slug=} does not exists")
-            follows, result = self.create_list(api=api, name=slug)
+        if target_list is None:
+            logger.warn(f"{slug=} does not exists. processing create...")
+            target_list, result = self.create_list(api=api, name=slug)
             if not result:
-                logger.error("follows list does not created.")
-                return False
+                raise Exception("List {slug=} does not created.")
 
-        # 現在フォローしているid一覧を取得
-        friends_ids: List[int] = api.friends_ids()
+        # 同期したいユーザーのid一覧を取得
+        if account.is_sync_follows:
+            logger.debug("sync follows")
+            target_ids: List[int] = api.friends_ids()
+        else:
+            logger.debug("sync manual users")
+            target_ids: List[int] = list(map(lambda x: self.__convert_sn_to_id(api=api, screen_name=x), account.target_screen_names))
+
         # 既存のfollowsリストのメンバー一覧を取得
         list_members: List[int] = [
-            i.id for i in api.list_members(list_id=follows.id, count=5000)]
-
+            i.id for i in api.list_members(list_id=target_list.id, count=5000)]
         # listに追加する新規friendsを算出(friends - list_members = add_target)
         add_targets: List[int] = list(
-            filter(lambda x: x not in list_members, friends_ids))
+            filter(lambda x: x not in list_members, target_ids))
         # listから削除するリムーブしたfriendsを算出(list_members - friends = remove_target)
         remove_targets: List[int] = list(
-            filter(lambda x: x not in friends_ids, list_members))
+            filter(lambda x: x not in target_ids, list_members))
 
         logger.info(
-            "exec: add:{} remove:{} diff:{}".format(
+            "exec: screen_name:{} slug:{} add:{} remove:{} diff:{}".format(
+                api.me().screen_name,
+                slug,
                 len(add_targets),
                 len(remove_targets),
                 len(add_targets) - len(remove_targets)
             ))
 
-        before_member_count: int = follows.member_count
         # add
         for chunked_user_ids in self._chunks(add_targets, 100):
-            result = api.add_list_members(list_id=follows.id,
+            result = api.add_list_members(list_id=target_list.id,
                                           user_id=chunked_user_ids)
-            logger.info(f"add member count:{len(chunked_user_ids)}")
+            logger.debug(f"slug:{slug} add member count:{len(chunked_user_ids)}")
 
         # remove
         for chunked_user_ids in self._chunks(remove_targets, 100):
-            result = api.add_list_members(list_id=follows.id,
+            result = api.add_list_members(list_id=target_list.id,
                                           user_id=chunked_user_ids)
-            logger.info(f"remove member count:{len(chunked_user_ids)}")
-
-        follows: TwitterList = self.get_list(api=api, slug=slug)
-        after_member_count: int = follows.member_count
-        logger.info(
-            "result: before:{} after:{} diff:{}".format(
-                before_member_count,
-                after_member_count,
-                before_member_count - after_member_count
-            ))
-
-        return True
+            logger.debug(f"slug:{slug} remove member count:{len(chunked_user_ids)}")
 
     async def run(self):
 
@@ -104,11 +104,11 @@ class TwitterSyncList(BackgroundCog):
             return
 
         while self.is_running:
-            logger.info(f"execute {__name__=}")
-            for account in config.twitter_sync_list:
+            logger.debug(f"execute {__name__=}")
+            for account in filter(lambda x: x.enabled, config.twitter_sync_list):
                 try:
                     self.do(account=account)
                 except Exception as e:
                     logger.error(e)
-            logger.info(f"finish {__name__=}")
+            logger.debug(f"finish {__name__=}")
             await asyncio.sleep(15 * 60)

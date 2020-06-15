@@ -3,11 +3,7 @@ bot:
   prefix: "!"
   token: ""
   presences:
-    - "リングフィットアドベンチャー"
-    - "Apex Legends"
-    - "歌枠"
     - "雑談"
-    - "マリオカート"
 
 TwitterSyncList:
   - enabled: False
@@ -17,6 +13,18 @@ TwitterSyncList:
       cs: ""
       at: ""
       ats: ""
+    is_sync_follows: True
+  - enabled: True
+    slug: hololive
+    credential:
+      ck: ""
+      cs: ""
+      at: ""
+      ats: ""
+    is_sync_follows: False
+    target_screen_names:
+      - hoge
+      - foo
 
 VTuberFanartCrawler:
   enabled: False

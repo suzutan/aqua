@@ -19,7 +19,6 @@ activities: List[str] = config.bot.presences
 
 class UpdatePresence(BackgroundCog):
     async def run(self):
-        logger.info("run")
         await App.bot.change_presence(status=Status.online)
 
         while self.is_running:
