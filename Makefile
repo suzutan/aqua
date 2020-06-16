@@ -10,10 +10,10 @@ backup:
 	cat config/production.yaml | gopass insert -f suzutan/app/aqua/production.yaml
 	cat settings.yaml | gopass insert -f suzutan/app/aqua/settings.yaml
 	cat credentials.json | gopass insert -f suzutan/app/aqua/credentials.json
-	gopass sync
+	gopass sync --store suzutan
 
 restore:
-	gopass sync
+	gopass sync --store suzutan
 	gopass show suzutan/app/aqua/development.yaml > config/development.yaml
 	gopass show suzutan/app/aqua/production.yaml > config/production.yaml
 	gopass show suzutan/app/aqua/settings.yaml > settings.yaml
