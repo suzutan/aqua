@@ -66,14 +66,14 @@ class TwitterSyncList(BackgroundCog):
             target_ids: List[int] = list(map(lambda x: self.__convert_sn_to_id(api=api, screen_name=x), account.target_screen_names))
 
         # 既存のfollowsリストのメンバー一覧を取得
-        list_members: List[int] = [
+        current_members: List[int] = [
             i.id for i in api.list_members(list_id=target_list.id, count=5000)]
-        # listに追加する新規friendsを算出(friends - list_members = add_target)
+        # listに追加する新規friendsを算出(friends - current_members = add_target)
         add_targets: List[int] = list(
-            filter(lambda x: x not in list_members, target_ids))
-        # listから削除するリムーブしたfriendsを算出(list_members - friends = remove_target)
+            filter(lambda x: x not in current_members, target_ids))
+        # listから削除するリムーブしたfriendsを算出(current_members - friends = remove_target)
         remove_targets: List[int] = list(
-            filter(lambda x: x not in target_ids, list_members))
+            filter(lambda x: x not in target_ids, current_members))
 
         logger.info(
             "exec: screen_name:{} slug:{} add:{} remove:{} diff:{}".format(
@@ -92,8 +92,8 @@ class TwitterSyncList(BackgroundCog):
 
         # remove
         for chunked_user_ids in self._chunks(remove_targets, 100):
-            result = api.add_list_members(list_id=target_list.id,
-                                          user_id=chunked_user_ids)
+            result = api.remove_list_members(list_id=target_list.id,
+                                             user_id=chunked_user_ids)
             logger.debug(f"slug:{slug} remove member count:{len(chunked_user_ids)}")
 
     async def run(self):
