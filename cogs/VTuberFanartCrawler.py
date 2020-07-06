@@ -2,7 +2,7 @@ import asyncio
 import time
 from logging import Logger
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import requests
 import tweepy
@@ -25,7 +25,7 @@ logger: Logger = getLogger(__name__)
 
 class VTuberFanartCrawler(BackgroundCog):
 
-    def download_media(self, target: ConfigData.VTuberFanartCrawler.Target, media_folders: List[GoogleDriveFile]):
+    def download_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile):
 
         logger.info(f"download_media: {target.screen_name}")
 
@@ -39,12 +39,6 @@ class VTuberFanartCrawler(BackgroundCog):
         # イラスト投稿用ハッシュタグが設定されているツイートのみフィルタ
         fanart_filtered_media_statuses = filter(lambda x: (len(x.entities["hashtags"]) > 0 and next(
             filter(lambda y: y["text"].lower() == target.fanart_hashtag.lower(), x.entities["hashtags"]), None) is not None), media_statuses)
-
-        # save media
-        target_folder = next(filter(lambda x: x["title"] == target.gdrive_folder_name, media_folders), None)
-        if target_folder is None:
-            logger.error("failed fetch target_folder")
-            return
 
         # file list
         logger.info("fetch google drive filelist")
@@ -93,7 +87,7 @@ class VTuberFanartCrawler(BackgroundCog):
                     logger.debug(f"target {media_name=} has been uploaded for google drive")
                     continue
 
-                save_path: Path = (Path("images") / target.gdrive_folder_name / media_name)
+                save_path: Path = (Path("images") / target.gdrive_category_folder_name / target.gdrive_folder_name / media_name)
                 save_path.parent.mkdir(parents=True, exist_ok=True)
                 if save_path.exists():
                     logger.debug(f"target {media_name=} has been downloaded for local")
@@ -113,14 +107,9 @@ class VTuberFanartCrawler(BackgroundCog):
                 with save_path.open("wb") as f:
                     f.write(media.content)
 
-    def upload_media(self, target: ConfigData.VTuberFanartCrawler.Target, media_folders: List[GoogleDriveFile]):
+    def upload_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile):
         logger.info(f"upload_media: {target.screen_name}")
-        image_path: Path = (Path("images") / target.gdrive_folder_name)
-        # save media
-        target_folder = next(filter(lambda x: x["title"] == target.gdrive_folder_name, media_folders), None)
-        if target_folder is None:
-            logger.error("failed fetch target_folder")
-            return
+        image_path: Path = (Path("images") / target.gdrive_category_folder_name / target.gdrive_folder_name)
 
         local_file_list = list(image_path.glob("*"))
         local_file_count = len(local_file_list)
@@ -137,6 +126,21 @@ class VTuberFanartCrawler(BackgroundCog):
             logger.info(f"upload succssful. progress: {count+1}/{local_file_count}({((count+1)/len(local_file_list))*100:.1f}%), {str(file)=}")
             file.unlink()
 
+    def make_and_fetch_folder(self, parent_id: str, folder_name: str) -> (Optional[GoogleDriveFile]):
+
+        target_folder_list: List[GoogleDriveFile] = Drive().fetch_file_list(folder_id=parent_id, folder_only=True)
+        target_folder: Optional[GoogleDriveFile] = next(filter(lambda x: x["title"] == folder_name, target_folder_list), None)
+        if target_folder is not None:
+            return target_folder
+
+        logger.debug("create missing target folder")
+        target_folder = Drive().create_folder(parent_id=parent_id, folder_title=folder_name)
+        if target_folder is not None:
+            return target_folder
+
+        logger.error("failed create target folder: {folder_name}")
+        return None
+
     def run(self):
 
         if not config.enabled:
@@ -144,27 +148,21 @@ class VTuberFanartCrawler(BackgroundCog):
             self.bot.remove_cog(__name__)
             return
 
-        # media作成
-        query = "'{}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'" \
-            .format(config.gdrive_root_folder_id)
-        media_folders: List[GoogleDriveFile] = Drive().drive.ListFile({'q': query}).GetList()
-        media_folders_name: List[str] = list(map(lambda y: y["title"], media_folders))
-
-        logger.debug("fetch current filder list")
-        targets: List[ConfigData.VTuberFanartCrawler.Target] = config.targets
-        new_folder_names = list(map(lambda x: x.gdrive_folder_name, filter(lambda x: x.gdrive_folder_name not in media_folders_name, targets)))
-
-        if len(new_folder_names) > 0:
-            logger.info(f"create sub folder. count:{len(new_folder_names)}")
-            for folder_name in new_folder_names:
-                media_folders.append(Drive().create_folder(parent_id=config.gdrive_root_folder_id, folder_title=folder_name))
-                logger.info(f"create folder: {folder_name=}")
-
         while self.is_running:
-            for n, target in enumerate(targets):
+            for n, target in enumerate(config.targets):
                 try:
-                    self.download_media(target, media_folders)
-                    self.upload_media(target, media_folders)
+                    logger.debug("fetch sub-category")
+                    parent_id: str = config.gdrive_root_folder_id
+                    folder_name: str = target.gdrive_category_folder_name
+                    subcategory_folder: GoogleDriveFile = self.make_and_fetch_folder(parent_id=parent_id, folder_name=folder_name)
+
+                    logger.debug("fetch target folder")
+                    parent_id = subcategory_folder["id"]
+                    folder_name = target.gdrive_folder_name
+                    target_folder: GoogleDriveFile = self.make_and_fetch_folder(parent_id=parent_id, folder_name=folder_name)
+
+                    self.download_media(target=target, target_folder=target_folder)
+                    self.upload_media(target=target, target_folder=target_folder)
                 except Exception as e:
                     logger.error("failed to run", exc_info=e)
                     time.sleep(15)

@@ -43,6 +43,7 @@ class ConfigData:
         @dataclass
         class Target:
             screen_name: str
+            gdrive_category_folder_name: str
             gdrive_folder_name: str
             fanart_hashtag: str
             tweet_fetch_count: int
@@ -104,6 +105,7 @@ class Config(Singleton):
                 gdrive_root_folder_id=r["VTuberFanartCrawler"]["gdrive_root_folder_id"],
                 targets=list(map(lambda x: ConfigData.VTuberFanartCrawler.Target(
                     screen_name=x["screen_name"],
+                    gdrive_category_folder_name=x["gdrive_category_folder_name"],
                     gdrive_folder_name=x["gdrive_folder_name"],
                     fanart_hashtag=x["fanart_hashtag"],
                     tweet_fetch_count=x["tweet_fetch_count"],
