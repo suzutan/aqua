@@ -4,7 +4,7 @@ bot:
   token: ""
   presences:
     - "雑談"
-
+  event_log_channel: 00000000000000000
 TwitterSyncList:
   - enabled: False
     slug: follows

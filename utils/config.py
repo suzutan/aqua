@@ -14,6 +14,7 @@ class ConfigData:
         prefix: str
         token: str
         presences: List[str]
+        event_log_channel: int
 
     @dataclass
     class TwitterSyncList:
@@ -91,6 +92,7 @@ class Config(Singleton):
                 prefix=r["bot"]["prefix"],
                 token=r["bot"]["token"],
                 presences=r["bot"]["presences"],
+                event_log_channel=r["bot"]["event_log_channel"],
             ),
             twitter_sync_list=list(map(lambda x: ConfigData.TwitterSyncList(
                 enabled=x["enabled"],
