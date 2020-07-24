@@ -21,7 +21,7 @@ restore:
 build:
 	docker build -t aqua .
 
-run-prod: build
+run-prod:
 	docker run --rm --name aqua \
 	-e APP_ENV=production \
 	-v ${PWD}/settings.yaml:/app/settings.yaml \
