@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import time
 from logging import Logger
 from pathlib import Path
@@ -19,17 +20,17 @@ from utils.logger import getLogger
 from utils.twitter import twitterAPI
 
 r: Session = requests.Session()
-config: ConfigData.VTuberFanartCrawler = Config.read().vtuber_fanart_crawler
+config: ConfigData = Config.read()
 logger: Logger = getLogger(__name__)
 
 
 class VTuberFanartCrawler(BackgroundCog):
 
-    def download_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile):
+    def download_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile) -> (int):
 
         logger.info(f"download_media: {target.screen_name}")
 
-        api: API = twitterAPI(config.credential)
+        api: API = twitterAPI(config.vtuber_fanart_crawler.credential)
 
         logger.info(f"fetch tweet, count:{target.tweet_fetch_count}")
         all_statuses = tweepy.Cursor(api.user_timeline, screen_name=target.screen_name, count=200).items(target.tweet_fetch_count)
@@ -106,8 +107,9 @@ class VTuberFanartCrawler(BackgroundCog):
                 # save local file
                 with save_path.open("wb") as f:
                     f.write(media.content)
+        return all_count
 
-    def upload_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile):
+    def upload_media(self, target: ConfigData.VTuberFanartCrawler.Target, target_folder: GoogleDriveFile) -> (int):
         logger.info(f"upload_media: {target.screen_name}")
         image_path: Path = (Path("images") / target.gdrive_category_folder_name / target.gdrive_folder_name)
 
@@ -126,6 +128,8 @@ class VTuberFanartCrawler(BackgroundCog):
             logger.info(f"upload succssful. progress: {count+1}/{local_file_count}({((count+1)/len(local_file_list))*100:.1f}%), {str(file)=}")
             file.unlink()
 
+        return local_file_count
+
     def make_and_fetch_folder(self, parent_id: str, folder_name: str) -> (Optional[GoogleDriveFile]):
 
         target_folder_list: List[GoogleDriveFile] = Drive().fetch_file_list(folder_id=parent_id, folder_only=True)
@@ -143,16 +147,16 @@ class VTuberFanartCrawler(BackgroundCog):
 
     def run(self):
 
-        if not config.enabled:
+        if not config.vtuber_fanart_crawler.enabled:
             logger.info("VTuberFanartCrawler is not enabled. cog removed.")
             self.bot.remove_cog(__name__)
             return
 
         while self.is_running:
-            for n, target in enumerate(config.targets):
+            for n, target in enumerate(config.vtuber_fanart_crawler.targets):
                 try:
                     logger.debug("fetch sub-category")
-                    parent_id: str = config.gdrive_root_folder_id
+                    parent_id: str = config.vtuber_fanart_crawler.gdrive_root_folder_id
                     folder_name: str = target.gdrive_category_folder_name
                     subcategory_folder: GoogleDriveFile = self.make_and_fetch_folder(parent_id=parent_id, folder_name=folder_name)
 
@@ -161,8 +165,11 @@ class VTuberFanartCrawler(BackgroundCog):
                     folder_name = target.gdrive_folder_name
                     target_folder: GoogleDriveFile = self.make_and_fetch_folder(parent_id=parent_id, folder_name=folder_name)
 
-                    self.download_media(target=target, target_folder=target_folder)
-                    self.upload_media(target=target, target_folder=target_folder)
+                    download_status_count: int = self.download_media(target=target, target_folder=target_folder)
+                    upload_image_count: int = self.upload_media(target=target, target_folder=target_folder)
+                    now: str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M')
+                    asyncio.run_coroutine_threadsafe(App.bot.get_channel(config.bot.event_log_channel).send(
+                        f"[VTuberFanrtCrawler] {now} crawl {target.gdrive_folder_name} Finished. {download_status_count=} {upload_image_count=}"), App.bot.loop)
                 except Exception as e:
                     logger.error("failed to run", exc_info=e)
                     time.sleep(15)
