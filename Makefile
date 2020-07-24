@@ -28,3 +28,5 @@ run-prod: build
 	-v ${PWD}/credentials.json:/app/credentials.json \
 	-v ${PWD}/config/production.yaml:/app/config/production.yaml \
 	aqua
+rsync:
+	rsync -auzvessh --exclude=.venv --delete-excluded . ops:aqua
