@@ -13,7 +13,7 @@ jobs:
       - name: Publish
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
-          name: suzutan/aqua/worker
+          name: suzutan/aqua/aqua
           username: suzutan
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: docker.pkg.github.com
