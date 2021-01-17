@@ -111,7 +111,7 @@ class Config(Singleton):
                     gdrive_folder_name=x["gdrive_folder_name"],
                     fanart_hashtag=x["fanart_hashtag"],
                     tweet_fetch_count=x["tweet_fetch_count"],
-                    notify_channels=x["notify_channels"],
+                    notify_channels=[] if "notify_channels" not in x.keys() else x["notify_channels"], ## 定義されていなければ空のリスト
                 ), r["VTuberFanartCrawler"]["targets"]))
             )
         )
