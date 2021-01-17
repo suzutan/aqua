@@ -168,8 +168,9 @@ class VTuberFanartCrawler(BackgroundCog):
                     download_status_count: int = self.download_media(target=target, target_folder=target_folder)
                     upload_image_count: int = self.upload_media(target=target, target_folder=target_folder)
                     now: str = datetime.datetime.now().strftime('%Y/%m/%d %H:%M')
-                    asyncio.run_coroutine_threadsafe(App.bot.get_channel(config.bot.event_log_channel).send(
-                        f"[VTuberFanrtCrawler] {now} crawl {target.gdrive_folder_name} Finished. {download_status_count=} {upload_image_count=}"), App.bot.loop)
+                    if download_status_count > 0:
+                        asyncio.run_coroutine_threadsafe(App.bot.get_channel(config.bot.event_log_channel).send(
+                            f"[VTuberFanrtCrawler] {now} crawl {target.gdrive_folder_name} Finished. {download_status_count=} {upload_image_count=}"), App.bot.loop)
                 except Exception as e:
                     logger.error("failed to run", exc_info=e)
                     time.sleep(15)
